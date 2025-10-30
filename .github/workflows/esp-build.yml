@@ -29,6 +29,7 @@ jobs:
 
       # 3️⃣ Clone ESP-IDF and install minimal ESP32 toolchain
       - name: Install ESP-IDF (ESP32 only)
+        shell: bash
         run: |
           python -m pip install --upgrade pip
           pip install cmake ninja
@@ -36,22 +37,34 @@ jobs:
             git clone --recursive https://github.com/espressif/esp-idf.git -b v5.5.1 esp-idf
           fi
           cd esp-idf
-          
           ./tools/idf_tools.py install --target esp32
           ./tools/idf_tools.py install-python-env
           cd ..
-          echo "source $PWD/esp-idf/export.sh" >> $GITHUB_ENV
+          echo "IDF_PATH=$PWD/esp-idf" >> $GITHUB_ENV
+          echo "$PWD/esp-idf/tools" >> $GITHUB_PATH
 
-      # 4️⃣ Clone your NodeMCU ESP32 firmware repository
+      # 4️⃣ Clone NodeMCU firmware repository
       - name: Clone NodeMCU firmware repo
+        shell: bash
         run: |
           git clone --recursive https://github.com/b1kamp666/nodemcu-esp32-firmware.git
           cd nodemcu-esp32-firmware
           if [ ! -d main/nanopb ]; then
             git clone https://github.com/nanopb/nanopb.git main/nanopb
-          fi
 
-      # 5️⃣ Build firmware in its root directory
+      # 5️⃣ Build firmware
       - name: Build ESP32 firmware
+        shell: bash
         run: |
-          source $PWD/esp-idf/export.sh
+          source $GITHUB_WORKSPACE/esp-idf/export.sh
+          cd nodemcu-esp32-firmware
+          idf.py build
+
+      # 6️⃣ Upload firmware artifacts
+      - name: Upload built firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: nodemcu-esp32-firmware
+          path: |
+            nodemcu-esp32-firmware/build/*.bin
+            nodemcu-esp32-firmware/build/*.elf
