@@ -1,4 +1,4 @@
-name: Build ESP-IDF firmware
+swname: Build ESP-IDF firmware
 
 on:
   push:
@@ -18,7 +18,7 @@ jobs:
           python-version: '3.11'
 
       - name: Set up ESP-IDF
-        uses: espressif/setup-esp-idf@v2
+        uses: espressif/install-esp-idf-action@v1
         with:
           esp-idf-version: 'stable'    # or set a specific tag like 'v4.4' or a branch
           python-version: '3.11'
