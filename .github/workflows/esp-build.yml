@@ -1,4 +1,4 @@
-swname: Build ESP-IDF firmware
+name: Build ESP-IDF firmware
 
 on:
   push:
