@@ -36,7 +36,7 @@ jobs:
             git clone --recursive https://github.com/espressif/esp-idf.git -b v5.5.1 esp-idf
           fi
           cd esp-idf
-          python -m pip install -r requirements.txt
+          
           ./tools/idf_tools.py install --target esp32
           ./tools/idf_tools.py install-python-env
           cd ..
