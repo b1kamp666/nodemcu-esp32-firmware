@@ -1,4 +1,4 @@
-name: Build NodeMCU ESP32 Firmware
+name: Build NodeMCU ESP32 Firmware (Fast CI)
 
 on:
   push:
@@ -9,11 +9,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # 1️⃣ Checkout your repo
-      - name: Checkout repo
+      # 1️⃣ Checkout repository and submodules
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: true   # fetches submodules if any
+          submodules: true
 
       # 2️⃣ Clone nanopb if missing
       - name: Ensure nanopb exists
@@ -22,26 +22,56 @@ jobs:
             git clone https://github.com/nanopb/nanopb.git main/nanopb
           fi
 
-      # 3️⃣ Setup Python
+      # 3️⃣ Set up Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
-      # 4️⃣ Install ESP-IDF
-      - name: Install ESP-IDF
-        uses: espressif/install-esp-idf-action@v1
+      # 4️⃣ Cache Python packages
+      - name: Cache pip packages
+        uses: actions/cache@v4
         with:
-          esp-idf-version: 'v5.5.1'
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
-      # 5️⃣ Build firmware
-      - name: Build project
+      # 5️⃣ Cache ESP-IDF toolchain
+      - name: Cache ESP-IDF
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.espressif
+            esp-idf
+          key: ${{ runner.os }}-espidf-v5.5.1
+          restore-keys: |
+            ${{ runner.os }}-espidf-
+
+      # 6️⃣ Install minimal ESP-IDF toolchain
+      - name: Install minimal ESP-IDF (ESP32 only)
         run: |
+          python -m pip install --upgrade pip
+          pip install cmake ninja
+          if [ ! -d esp-idf ]; then
+            git clone --recursive https://github.com/espressif/esp-idf.git -b v5.5.1 esp-idf
+          fi
+          cd esp-idf
+          python -m pip install -r requirements.txt
+          ./tools/idf_tools.py install --target esp32
+          ./tools/idf_tools.py install-python-env
+          cd ..
+          echo "source $PWD/esp-idf/export.sh" >> $GITHUB_ENV
+
+      # 7️⃣ Build firmware
+      - name: Build NodeMCU firmware
+        run: |
+          source $PWD/esp-idf/export.sh
           idf.py fullclean
           idf.py build
 
-      # 6️⃣ Upload firmware artifacts
-      - name: Upload build artifacts
+      # 8️⃣ Upload build artifacts
+      - name: Upload firmware binaries
         uses: actions/upload-artifact@v4
         with:
           name: nodemcu-esp32-firmware
